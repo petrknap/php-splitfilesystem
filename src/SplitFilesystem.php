@@ -26,9 +26,9 @@ class SplitFilesystem implements FilesystemInterface
     const INNER_NAME_PREFIX = '_';
 
     /**
-     * @var FileSystem
+     * @var FilesystemInterface
      */
-    private $fileSystem;
+    private $filesystem;
 
     /**
      * @var Config
@@ -43,7 +43,7 @@ class SplitFilesystem implements FilesystemInterface
     {
         $config = Util::ensureConfig($config);
 
-        $this->fileSystem = new Filesystem($adapter, $config);
+        $this->filesystem = new Filesystem($adapter, $config);
         $this->config = $config;
     }
 
@@ -157,7 +157,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function has($path)
     {
-        return $this->fileSystem->has($this->getInnerPath($path, false));
+        return $this->filesystem->has($this->getInnerPath($path, false));
     }
 
     /**
@@ -166,7 +166,7 @@ class SplitFilesystem implements FilesystemInterface
     public function read($path)
     {
         try {
-            return $this->fileSystem->read(
+            return $this->filesystem->read(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -180,7 +180,7 @@ class SplitFilesystem implements FilesystemInterface
     public function readStream($path)
     {
         try {
-            return $this->fileSystem->readStream(
+            return $this->filesystem->readStream(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -228,7 +228,7 @@ class SplitFilesystem implements FilesystemInterface
             }
         }
 
-        foreach ($this->fileSystem->listContents($directory, false) as $metadata) {
+        foreach ($this->filesystem->listContents($directory, false) as $metadata) {
             if (0 < $depth) {
                 if ('dir' === $metadata['type']) {
                     $listedContents = $this->listInnerContents($metadata['path'], $type, $depth - 1, $listedContents);
@@ -249,7 +249,7 @@ class SplitFilesystem implements FilesystemInterface
     public function getMetadata($path)
     {
         try {
-            $metadata = $this->fileSystem->getMetadata(
+            $metadata = $this->filesystem->getMetadata(
                 $this->getInnerPath($path, false)
             );
             if (is_array($metadata)) {
@@ -266,7 +266,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function getSize($path)
     {
-        return $this->fileSystem->getSize(
+        return $this->filesystem->getSize(
             $this->getInnerPath($path, false)
         );
     }
@@ -277,7 +277,7 @@ class SplitFilesystem implements FilesystemInterface
     public function getMimetype($path)
     {
         try {
-            return $this->fileSystem->getMimetype(
+            return $this->filesystem->getMimetype(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -291,7 +291,7 @@ class SplitFilesystem implements FilesystemInterface
     public function getTimestamp($path)
     {
         try {
-            return $this->fileSystem->getTimestamp(
+            return $this->filesystem->getTimestamp(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -305,7 +305,7 @@ class SplitFilesystem implements FilesystemInterface
     public function getVisibility($path)
     {
         try {
-            return $this->fileSystem->getVisibility(
+            return $this->filesystem->getVisibility(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -319,7 +319,7 @@ class SplitFilesystem implements FilesystemInterface
     public function write($path, $contents, array $config = [])
     {
         try {
-            return $this->fileSystem->write(
+            return $this->filesystem->write(
                 $this->getInnerPath($path, false),
                 $contents,
                 $config
@@ -335,7 +335,7 @@ class SplitFilesystem implements FilesystemInterface
     public function writeStream($path, $resource, array $config = [])
     {
         try {
-            return $this->fileSystem->writeStream(
+            return $this->filesystem->writeStream(
                 $this->getInnerPath($path, false),
                 $resource,
                 $config
@@ -351,7 +351,7 @@ class SplitFilesystem implements FilesystemInterface
     public function update($path, $contents, array $config = [])
     {
         try {
-            return $this->fileSystem->update(
+            return $this->filesystem->update(
                 $this->getInnerPath($path, false),
                 $contents,
                 $config
@@ -367,7 +367,7 @@ class SplitFilesystem implements FilesystemInterface
     public function updateStream($path, $resource, array $config = [])
     {
         try {
-            return $this->fileSystem->updateStream(
+            return $this->filesystem->updateStream(
                 $this->getInnerPath($path, false),
                 $resource,
                 $config
@@ -383,7 +383,7 @@ class SplitFilesystem implements FilesystemInterface
     public function rename($path, $newPath)
     {
         try {
-            return $this->fileSystem->rename(
+            return $this->filesystem->rename(
                 $this->getInnerPath($path, false),
                 $this->getInnerPath($newPath, false)
             );
@@ -400,7 +400,7 @@ class SplitFilesystem implements FilesystemInterface
     public function copy($path, $newPath)
     {
         try {
-            return $this->fileSystem->copy(
+            return $this->filesystem->copy(
                 $this->getInnerPath($path, false),
                 $this->getInnerPath($newPath, false)
             );
@@ -417,7 +417,7 @@ class SplitFilesystem implements FilesystemInterface
     public function delete($path)
     {
         try {
-            return $this->fileSystem->delete(
+            return $this->filesystem->delete(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -432,7 +432,7 @@ class SplitFilesystem implements FilesystemInterface
     public function deleteDir($dirname)
     {
         try {
-            return $this->fileSystem->deleteDir(
+            return $this->filesystem->deleteDir(
                 $this->getInnerPath($dirname, true)
             );
         } catch (RootViolationException $e) {
@@ -445,7 +445,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function createDir($dirname, array $config = [])
     {
-        return $this->fileSystem->createDir(
+        return $this->filesystem->createDir(
             $this->getInnerPath($dirname, true),
             $config
         );
@@ -456,7 +456,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function setVisibility($path, $visibility)
     {
-        return $this->fileSystem->setVisibility(
+        return $this->filesystem->setVisibility(
             $this->getInnerPath($path, false),
             $visibility
         );
@@ -467,7 +467,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function put($path, $contents, array $config = [])
     {
-        return $this->fileSystem->put(
+        return $this->filesystem->put(
             $this->getInnerPath($path, false),
             $contents,
             $config
@@ -479,7 +479,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function putStream($path, $resource, array $config = [])
     {
-        return $this->fileSystem->putStream(
+        return $this->filesystem->putStream(
             $this->getInnerPath($path, false),
             $resource,
             $config
@@ -492,7 +492,7 @@ class SplitFilesystem implements FilesystemInterface
     public function readAndDelete($path)
     {
         try {
-            return $this->fileSystem->readAndDelete(
+            return $this->filesystem->readAndDelete(
                 $this->getInnerPath($path, false)
             );
         } catch (FileNotFoundException $e) {
@@ -505,7 +505,7 @@ class SplitFilesystem implements FilesystemInterface
      */
     public function get($path, Handler $handler = null)
     {
-        return $this->fileSystem->get(
+        return $this->filesystem->get(
             $this->getInnerPath($path, false),
             $handler
         );
