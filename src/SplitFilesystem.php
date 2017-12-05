@@ -65,6 +65,10 @@ class SplitFilesystem implements FilesystemInterface
             $path = (string)substr($path, 1);
         }
 
+        if (empty($path)) {
+            return '';
+        }
+
         $pathParts = explode('/', $path);
         $iMax = count($pathParts) - 1;
 
