@@ -6,8 +6,27 @@ use League\Flysystem\Adapter\Local;
 use League\Flysystem\AdapterInterface;
 use PetrKnap\Php\SplitFilesystem\SplitFilesystem;
 
-class SplitFilesystemTest extends AbstractTestCase
+class SplitFilesystemTest extends \PHPUnit_Framework_TestCase
 {
+    /**
+     * @return string
+     */
+    protected static function getTemporaryDirectory()
+    {
+        $temporaryDirectory = tempnam(__DIR__ . '/../var', 'test_');
+
+        unlink($temporaryDirectory);
+
+        return $temporaryDirectory;
+    }
+
+    public static function tearDownAfterClass()
+    {
+        passthru(sprintf('rm -rf %s/test_*', escapeshellarg(__DIR__ . '/../var')));
+
+        parent::tearDownAfterClass();
+    }
+
     /**
      * @dataProvider dataGeneratesCorrectInnerPath
      * @param string $expectedInnerPath
@@ -111,18 +130,13 @@ class SplitFilesystemTest extends AbstractTestCase
 
     /**
      * @dataProvider dataListContentsWorks
+     * @param SplitFilesystem $filesystem
      * @param string $directory
      * @param bool $recursive
      * @param array $expected
      */
-    public function testListContentsWorks($directory, $recursive, $expected)
+    public function testListContentsWorks(SplitFilesystem $filesystem, $directory, $recursive, $expected)
     {
-        $filesystem = new SplitFilesystem(new Local(static::getTemporaryDirectory()));
-        $filesystem->createDir('empty_directory');
-        $filesystem->write('file.ext', 'content');
-        $filesystem->write('directory/file.ext', 'content');
-        $filesystem->write('directory/subdirectory/file.ext', 'content');
-
         $listedContents = $filesystem->listContents($directory, $recursive);
 
         $listed = [];
@@ -134,13 +148,19 @@ class SplitFilesystemTest extends AbstractTestCase
 
     public function dataListContentsWorks()
     {
+        $filesystem = new SplitFilesystem(new Local(static::getTemporaryDirectory()));
+        $filesystem->createDir('empty_directory');
+        $filesystem->write('file.ext', 'content');
+        $filesystem->write('directory/file.ext', 'content');
+        $filesystem->write('directory/subdirectory/file.ext', 'content');
+
         return [
-            ['', false, [
+            [$filesystem, '', false, [
                 'empty_directory' => 'dir',
                 'file.ext' => 'file',
                 'directory' => 'dir',
             ]],
-            ['', true, [
+            [$filesystem, '', true, [
                 'empty_directory' => 'dir',
                 'file.ext' => 'file',
                 'directory' => 'dir',
@@ -148,23 +168,89 @@ class SplitFilesystemTest extends AbstractTestCase
                 'directory/subdirectory' => 'dir',
                 'directory/subdirectory/file.ext' => 'file',
             ]],
-            ['empty_directory', false, []],
-            ['empty_directory', true, []],
-            ['directory', false, [
+            [$filesystem, 'empty_directory', false, []],
+            [$filesystem, 'empty_directory', true, []],
+            [$filesystem, 'directory', false, [
                 'directory/file.ext' => 'file',
                 'directory/subdirectory' => 'dir',
             ]],
-            ['directory', true, [
+            [$filesystem, 'directory', true, [
                 'directory/file.ext' => 'file',
                 'directory/subdirectory' => 'dir',
                 'directory/subdirectory/file.ext' => 'file',
             ]],
-            ['directory/subdirectory', false, [
+            [$filesystem, 'directory/subdirectory', false, [
                 'directory/subdirectory/file.ext' => 'file',
             ]],
-            ['directory/subdirectory', true, [
+            [$filesystem, 'directory/subdirectory', true, [
                 'directory/subdirectory/file.ext' => 'file',
             ]],
         ];
+    }
+
+    /**
+     * @dataProvider dataPerformanceIsNotIntrusive
+     * @param SplitFilesystem $fileSystem
+     * @param int $from
+     * @param int $to
+     */
+    public function testPerformanceIsNotIntrusive(SplitFilesystem $fileSystem, $from, $to)
+    {
+        $startStopStack = [];
+        $start = function () use (&$startStopStack) {
+            $startStopStack[] = microtime(true);
+        };
+        $stop = function ($allowedDuration) use (&$startStopStack) {
+            if ($allowedDuration < (microtime(true) - array_pop($startStopStack))) {
+                $this->markTestSkipped('WARNING: Performance was intrusive');
+            }
+        };
+
+        #region Build storage
+        for ($i = $from; $i < $to; $i++) {
+            $file = "/file_{$i}.tmp";
+
+            #region Create file
+            $start();
+            $fileSystem->write($file, null);
+            $stop(5);
+            #endregion
+
+            #region Write content
+            $start();
+            $fileSystem->update($file, sha1($i, true));
+            $fileSystem->update($file, md5($i, true), ["append" => true]);
+            $stop(10);
+            #endregion
+
+            #region Read content
+            $start();
+            $fileSystem->read($file);
+            $stop(5);
+            #endregion
+        }
+        #endregion
+
+        #region Iterate all files
+        $start();
+        /** @noinspection PhpStatementHasEmptyBodyInspection */
+        /** @noinspection PhpUnusedLocalVariableInspection */
+        foreach ($fileSystem->listContents() as $unused) {
+            // no-op
+        }
+        $stop(5 * $to);
+        #endregion
+    }
+
+    public function dataPerformanceIsNotIntrusive()
+    {
+        $iMax = 2048;
+        $step = 512;
+        $output = [];
+        $fileSystem = new SplitFilesystem(new Local(static::getTemporaryDirectory()));
+        for ($i = 0; $i < $iMax; $i += $step) {
+            $output[] = [$fileSystem, $i, $i + $step];
+        }
+        return $output;
     }
 }
